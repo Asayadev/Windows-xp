@@ -1,0 +1,1966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Windows XP Web OS Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background: #3a6ea5;
+            background-image: radial-gradient(circle at 50% 50%, #4a8ec5 0%, #3a6ea5 100%);
+            background-size: cover;
+            background-position: center;
+        }
+        
+        /* Desktop */
+        .desktop {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 16px;
+            padding: 20px;
+            height: calc(100vh - 50px);
+        }
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80px;
+            padding: 8px;
+            border-radius: 6px;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            cursor: pointer;
+            transition: background 0.15s;
+            text-align: center;
+            font-size: 12px;
+        }
+        .desktop-icon .icon-svg {
+            font-size: 40px;
+            margin-bottom: 4px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        }
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Taskbar */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: linear-gradient(to bottom, #245edb 0%, #194da0 100%);
+            border-top: 2px solid #4a8ec5;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            gap: 6px;
+            z-index: 9999;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
+        }
+        .start-btn {
+            background: linear-gradient(to bottom, #388e3c, #1b5e20);
+            color: white;
+            border: 1px solid #81c784;
+            padding: 4px 14px;
+            border-radius: 0 12px 12px 0;
+            font-weight: bold;
+            font-style: italic;
+            cursor: pointer;
+            font-size: 15px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
+        }
+        .start-btn:hover {
+            background: linear-gradient(to bottom, #4caf50, #2e7d32);
+        }
+        .taskbar-items {
+            flex: 1;
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            padding: 2px 0;
+        }
+        .taskbar-item {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 110px;
+            max-width: 160px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+        }
+        .taskbar-item.active {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: #ffcc00;
+            font-weight: bold;
+        }
+        .taskbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            background: #0c317a;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #194da0;
+        }
+        .tray-icon {
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .clock {
+            color: white;
+            font-size: 12px;
+            min-width: 65px;
+            text-align: center;
+        }
+
+        /* Start Menu */
+        .start-menu {
+            position: fixed;
+            bottom: 48px;
+            left: 0;
+            background: white;
+            width: 280px;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 2px 4px 20px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 9998;
+            border: 2px solid #245edb;
+            border-bottom: none;
+            overflow: hidden;
+        }
+        .start-menu.show {
+            display: block;
+        }
+        .start-header {
+            background: linear-gradient(to right, #194da0, #388e3c);
+            color: white;
+            padding: 12px 16px;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .start-menu-list {
+            max-height: 65vh;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .start-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #333;
+        }
+        .start-menu-item:hover {
+            background: #245edb;
+            color: white;
+        }
+        .start-divider {
+            height: 1px;
+            background: #ddd;
+            margin: 4px 12px;
+        }
+
+        /* Windows */
+        .window {
+            position: fixed;
+            min-width: 320px;
+            min-height: 220px;
+            background: #ece9d8;
+            border: 3px solid #0055ea;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            overflow: hidden;
+            resize: both;
+        }
+        /* Touch-friendly window resize corner */
+        .window {
+            position: absolute;
+        }
+        .window-resize-handle {
+            position: absolute;
+            right: 1px;
+            bottom: 1px;
+            width: 24px;
+            height: 24px;
+            z-index: 20;
+            cursor: nwse-resize;
+            touch-action: none;
+            background:
+                linear-gradient(135deg, transparent 0 52%, rgba(10,36,106,.55) 53% 58%, transparent 59%),
+                linear-gradient(135deg, transparent 0 68%, rgba(10,36,106,.75) 69% 74%, transparent 75%),
+                linear-gradient(135deg, transparent 0 84%, rgba(10,36,106,.9) 85% 90%, transparent 91%);
+            opacity: .9;
+        }
+        .window-resize-handle:active {
+            opacity: 1;
+        }
+
+        .window.active {
+            border-color: #0a246a;
+        }
+        .window-header {
+            background: linear-gradient(to right, #0058ee, #3d93ff);
+            color: white;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+            height: 30px;
+            touch-action: none;
+        }
+        .window.active .window-header {
+            background: linear-gradient(to right, #0a246a, #a6caf0);
+        }
+        .window-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .window-controls {
+            display: flex;
+            gap: 3px;
+        }
+        .window-controls button {
+            border: 1px solid white;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .window-controls .minimize { background: #388e3c; }
+        .window-controls .maximize { background: #1976d2; }
+        .window-controls .close { background: #d32f2f; }
+        .window-controls .size-down { background: #7b1fa2; }
+        .window-controls .size-up { background: #00897b; }
+        .window-controls button { touch-action: manipulation; }
+        .media-playall-bar {
+            display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+            padding:6px; background:#e7e2cf; border-bottom:1px solid #aaa;
+        }
+        .media-playall-bar .media-count { font-size:11px; font-weight:bold; color:#333; margin-left:auto; }
+        .playlist-box { width:100%; max-height:90px; overflow:auto; background:#171717; border:1px solid #444; padding:5px; }
+        .playlist-row { color:#ddd; font-size:11px; padding:4px 6px; cursor:pointer; border-radius:2px; }
+        .playlist-row:hover,.playlist-row.current { background:#244f88; color:white; }
+        .window-body {
+            flex: 1;
+            padding: 10px;
+            overflow: auto;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Dialogs */
+        .xp-dialog-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .xp-dialog {
+            background: #ece9d8;
+            border: 3px solid #0a246a;
+            border-radius: 6px;
+            padding: 16px;
+            min-width: 300px;
+            max-width: 90vw;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        }
+        .xp-dialog-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #0a246a;
+        }
+        .xp-dialog-body {
+            font-size: 13px;
+            margin-bottom: 14px;
+            color: #222;
+        }
+        .xp-dialog-body input,
+        .xp-dialog-body textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #7f9db9;
+            border-radius: 2px;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        .xp-dialog-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .xp-dialog-actions button {
+            padding: 4px 16px;
+            border: 1px solid #003c74;
+            border-radius: 3px;
+            background: #ece9d8;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .xp-dialog-actions button.primary {
+            background: #0055ea;
+            color: white;
+        }
+
+        /* File Grid & Thumbnails */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            padding: 8px;
+        }
+        .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .file-item:hover {
+            background: #e0edff;
+        }
+        .file-item .icon {
+            font-size: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+        }
+        .file-item img.thumb, .file-item video.thumb {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .file-item .name {
+            font-size: 11px;
+            margin-top: 4px;
+            word-break: break-word;
+        }
+
+        .file-item .video-thumb-box {
+            width: 72px; height: 64px; border-radius: 4px; border: 1px solid #9aa7b5;
+            background: linear-gradient(135deg,#202a33,#10151a); position: relative;
+            overflow: hidden; display:flex; align-items:center; justify-content:center;
+        }
+        .file-item .video-thumb-box img { width:100%; height:100%; object-fit:cover; display:block; }
+        .file-item .video-thumb-box .video-play-badge {
+            position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+            width:26px; height:26px; border-radius:50%; background:rgba(0,0,0,.68);
+            color:#fff; display:flex; align-items:center; justify-content:center;
+            font-size:13px; pointer-events:none; border:1px solid rgba(255,255,255,.65);
+        }
+        .video-thumb-loading { font-size:10px; color:#c9d4df; text-align:center; padding:4px; }
+
+        .xp-context-menu {
+            position: fixed;
+            min-width: 170px;
+            background: #fff;
+            border: 1px solid #7f9db9;
+            box-shadow: 3px 3px 10px rgba(0,0,0,.35);
+            z-index: 10050;
+            padding: 3px 0;
+            font-size: 13px;
+        }
+        .xp-context-menu button {
+            display:block; width:100%; text-align:left; border:0; background:#fff;
+            padding:8px 12px; cursor:pointer; font-size:13px;
+        }
+        .xp-context-menu button:hover { background:#dceeff; }
+        .xp-context-menu .danger { color:#b00000; }
+        .notepad-toolbar { display:flex; gap:5px; flex-wrap:wrap; padding:6px; background:#ece9d8; border-bottom:1px solid #7f9db9; }
+        .image-viewer { height:100%; display:flex; flex-direction:column; background:#222; color:#fff; }
+        .image-viewer-stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+        .image-viewer-stage img { max-width:100%; max-height:100%; object-fit:contain; }
+        .image-viewer-controls { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; padding:7px; background:#111; }
+
+        /* Storage Table */
+        .storage-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .storage-table th, .storage-table td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
+        }
+        .storage-table th {
+            background: #ece9d8;
+        }
+
+        /* Notepad */
+        .notepad-area {
+            width: 100%;
+            flex: 1;
+            min-height: 200px;
+            border: 1px solid #7f9db9;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: none;
+            outline: none;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 4px 10px;
+            background: #ece9d8;
+            border: 1px solid #7f9db9;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn:hover { background: #dce5f0; }
+        .btn-primary { background: #0055ea; color: white; border-color: #003c74; }
+        .btn-danger { background: #d32f2f; color: white; border-color: #9a0007; }
+
+        /* Music Player Equalizer */
+        .music-player {
+            background: radial-gradient(circle at top, #263238 0%, #0b0f12 55%, #050607 100%);
+            color: #fff;
+            height: 100%;
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            padding: 14px;
+            gap: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .music-eq-wrap {
+            flex: 1;
+            min-height: 125px;
+            position: relative;
+            background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(8,18,24,.9));
+            border: 1px solid #31505d;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,.7);
+        }
+        .music-eq-wrap::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+            background-size: 100% 20px, 28px 100%;
+            pointer-events: none;
+        }
+        .music-eq-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .music-now-playing {
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #e8f5ff;
+        }
+        .music-visualizer-status {
+            text-align: center;
+            font-size: 10px;
+            color: #9fb6c2;
+        }
+        .music-audio {
+            width: 100%;
+            height: 36px;
+        }
+        @media (max-width: 520px) {
+            .music-player { padding: 9px; }
+            .music-eq-wrap { min-height: 105px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="desktop" id="desktop">
+        <div class="desktop-icon" data-desktop-index="0" data-path="C:" title="Double-click to open">
+            <div class="icon-svg">🖥️</div><div>My Computer</div>
+        </div>
+        <div class="desktop-icon" data-desktop-index="1" data-path="C:/Documents" title="Double-click to open">
+            <div class="icon-svg">📁</div><div>My Documents</div>
+        </div>
+        <div class="desktop-icon" data-desktop-index="2" data-path="C:/Music" title="Double-click to open">
+            <div class="icon-svg">🎵</div><div>My Music</div>
+        </div>
+        <div class="desktop-icon" data-desktop-index="3" data-path="C:/Videos" title="Double-click to open">
+            <div class="icon-svg">🎬</div><div>My Videos</div>
+        </div>
+        <div class="desktop-icon" data-desktop-index="4" data-path="C:/Pictures" title="Double-click to open">
+            <div class="icon-svg">🖼️</div><div>My Pictures</div>
+        </div>
+        <div class="desktop-icon" data-desktop-index="5" data-app="storage" title="Double-click to open">
+            <div class="icon-svg">💾</div><div>Storage Access</div>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="start-btn" id="startBtn">start</button>
+        <div class="taskbar-items" id="taskbarItems"></div>
+        <div class="taskbar-right">
+            <span class="tray-icon" onclick="openApp('storage')">💾</span>
+            <span class="tray-icon" onclick="openApp('taskmanager')">📊</span>
+            <div class="clock" id="clock">00:00 AM</div>
+        </div>
+    </div>
+
+    <!-- Start Menu -->
+    <div class="start-menu" id="startMenu">
+        <div class="start-header">🪟 Windows XP</div>
+        <div class="start-menu-list">
+            <div class="start-menu-item" onclick="openExplorer('C:')">🖥️ My Computer</div>
+            <div class="start-menu-item" onclick="openExplorer('C:/Documents')">📁 My Documents</div>
+            <div class="start-menu-item" onclick="openExplorer('C:/Music')">🎵 My Music</div>
+            <div class="start-menu-item" onclick="openExplorer('C:/Videos')">🎬 My Videos</div>
+            <div class="start-menu-item" onclick="openExplorer('C:/Pictures')">🖼️ My Pictures</div>
+            <div class="start-divider"></div>
+            <div class="start-menu-item" onclick="openApp('notepad')">📝 Notepad</div>
+            <div class="start-menu-item" onclick="openApp('paint')">🎨 Paint</div>
+            <div class="start-menu-item" onclick="openApp('storage')">💾 Storage Access</div>
+            <div class="start-menu-item" onclick="openApp('taskmanager')">📊 Task Manager</div>
+            <div class="start-divider"></div>
+            <div class="start-menu-item" onclick="shutdown()">⏻ Shutdown</div>
+        </div>
+    </div>
+
+    <div id="windowContainer"></div>
+
+    <script>
+        // ==========================================
+        // INDEXEDDB ENGINE (UNLIMITED LARGE STORAGE)
+        // ==========================================
+        const DB_NAME = 'XP_WebOS_DB';
+        const DB_VERSION = 1;
+        let dbInstance = null;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                if (dbInstance) return resolve(dbInstance);
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('sys')) {
+                        db.createObjectStore('sys', { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = (e) => {
+                    dbInstance = e.target.result;
+                    resolve(dbInstance);
+                };
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        async function getFS() {
+            const db = await initDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('sys', 'readonly');
+                const store = tx.objectStore('sys');
+                const req = store.get('filesystem');
+                req.onsuccess = () => {
+                    let fs = req.result ? req.result.data : null;
+                    if (!fs || !fs['C:']) {
+                        fs = {
+                            'C:': {
+                                type: 'folder',
+                                children: {
+                                    'Documents': { type: 'folder', children: { 'Welcome.txt': { type: 'file', content: 'Welcome to Windows XP Web OS File System!' } } },
+                                    'Pictures': { type: 'folder', children: {} },
+                                    'Music': { type: 'folder', children: {} },
+                                    'Videos': { type: 'folder', children: {} }
+                                }
+                            }
+                        };
+                        saveFS(fs);
+                    }
+                    resolve(fs);
+                };
+            });
+        }
+
+        async function saveFS(fs) {
+            const db = await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('sys', 'readwrite');
+                const store = tx.objectStore('sys');
+                const req = store.put({ id: 'filesystem', data: fs });
+                req.onsuccess = () => resolve();
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function getNode(fs, path) {
+            if (!path || path === 'C:') return fs['C:'];
+            const parts = path.split('/').filter(p => p && p !== 'C:');
+            let cur = fs['C:'];
+            for (let p of parts) {
+                if (!cur || !cur.children || !cur.children[p]) return null;
+                cur = cur.children[p];
+            }
+            return cur;
+        }
+
+        // ==========================================
+        // WINDOW MANAGER & MOVEMENT
+        // ==========================================
+        let windows = [];
+        let winZ = 100;
+
+        function createWindow(title, icon, content, opts = {}) {
+            const id = 'win_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+            const container = document.getElementById('windowContainer');
+            const w = document.createElement('div');
+            w.className = 'window active';
+            w.id = id;
+            const requestedW = opts.width || 560;
+            const requestedH = opts.height || 400;
+            const mobile = window.innerWidth <= 700;
+            const initialW = Math.min(requestedW, Math.max(300, window.innerWidth - 18));
+            const initialH = Math.min(requestedH, Math.max(220, window.innerHeight - 78));
+            w.style.width = initialW + 'px';
+            w.style.height = initialH + 'px';
+            w.style.left = Math.max(8, (window.innerWidth - initialW)/2 + (windows.length*12)) + 'px';
+            w.style.top = Math.max(8, (window.innerHeight - initialH - 48)/2 + (windows.length*12)) + 'px';
+            w.style.zIndex = ++winZ;
+
+            w.innerHTML = `
+                <div class="window-header">
+                    <div class="window-title"><span>${icon || '📄'}</span> <span>${title}</span></div>
+                    <div class="window-controls">
+                        <button class="size-down" title="Make smaller" onclick="resizeWindow('${id}', -1)">−</button>
+                        <button class="size-up" title="Make larger" onclick="resizeWindow('${id}', 1)">＋</button>
+                        <button class="minimize" onclick="minimizeWindow('${id}')">_</button>
+                        <button class="maximize" onclick="maximizeWindow('${id}')">□</button>
+                        <button class="close" onclick="closeWindow('${id}')">✕</button>
+                    </div>
+                </div>
+                <div class="window-body">${content}</div>
+                <div class="window-resize-handle" aria-label="Drag to resize window" title="Drag to resize"></div>
+            `;
+
+            container.appendChild(w);
+            windows.push(id);
+            makeDraggable(w);
+            setupWindowResize(w);
+            addTaskbarItem(id, title, icon);
+            focusWindow(id);
+            return id;
+        }
+
+        function setupWindowResize(el) {
+            const resizeHandle = el.querySelector('.window-resize-handle');
+            if (!resizeHandle) return;
+
+            let resizing = false;
+            let startX = 0, startY = 0, startW = 0, startH = 0;
+
+            const beginResize = (clientX, clientY, ev) => {
+                if (el.dataset.maxed === 'true') return;
+                ev?.preventDefault?.();
+                ev?.stopPropagation?.();
+                focusWindow(el.id);
+                resizing = true;
+                startX = clientX;
+                startY = clientY;
+                startW = el.offsetWidth;
+                startH = el.offsetHeight;
+            };
+
+            const doResize = (clientX, clientY, ev) => {
+                if (!resizing) return;
+                ev?.preventDefault?.();
+
+                const minW = window.innerWidth <= 700 ? 280 : 320;
+                const minH = 220;
+                const maxW = Math.max(minW, window.innerWidth - 8);
+                const maxH = Math.max(minH, window.innerHeight - 58);
+
+                const newW = Math.max(minW, Math.min(maxW, startW + clientX - startX));
+                const newH = Math.max(minH, Math.min(maxH, startH + clientY - startY));
+
+                el.style.width = newW + 'px';
+                el.style.height = newH + 'px';
+
+                const left = parseInt(el.style.left) || 0;
+                const top = parseInt(el.style.top) || 0;
+                el.style.left = Math.max(4, Math.min(left, window.innerWidth - newW - 4)) + 'px';
+                el.style.top = Math.max(4, Math.min(top, window.innerHeight - newH - 52)) + 'px';
+            };
+
+            const endResize = () => { resizing = false; };
+
+            if (window.PointerEvent) {
+                resizeHandle.addEventListener('pointerdown', (e) => {
+                    beginResize(e.clientX, e.clientY, e);
+                    try { resizeHandle.setPointerCapture(e.pointerId); } catch (_) {}
+                });
+                resizeHandle.addEventListener('pointermove', (e) => doResize(e.clientX, e.clientY, e));
+                resizeHandle.addEventListener('pointerup', endResize);
+                resizeHandle.addEventListener('pointercancel', endResize);
+            } else {
+                resizeHandle.addEventListener('touchstart', (e) => {
+                    const t = e.touches[0];
+                    beginResize(t.clientX, t.clientY, e);
+                }, {passive:false});
+                resizeHandle.addEventListener('touchmove', (e) => {
+                    if (!e.touches.length) return;
+                    const t = e.touches[0];
+                    doResize(t.clientX, t.clientY, e);
+                }, {passive:false});
+                resizeHandle.addEventListener('touchend', endResize, {passive:true});
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    beginResize(e.clientX, e.clientY, e);
+                    const move = (ev) => doResize(ev.clientX, ev.clientY, ev);
+                    const up = () => {
+                        endResize();
+                        document.removeEventListener('mousemove', move);
+                        document.removeEventListener('mouseup', up);
+                    };
+                    document.addEventListener('mousemove', move);
+                    document.addEventListener('mouseup', up);
+                });
+            }
+        }
+
+        function closeWindow(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const audio = el.querySelector('#musicAudio');
+            if (audio) {
+                try { audio.pause(); } catch (_) {}
+                if (xpCurrentAudio === audio) {
+                    cancelAnimationFrame(xpEqAnimation);
+                    xpCurrentAudio = null;
+                    xpAudioSource = null;
+                }
+            }
+
+            el.remove();
+            windows = windows.filter(w => w !== id);
+            removeTaskbarItem(id);
+        }
+
+        function minimizeWindow(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        }
+
+        function maximizeWindow(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (el.dataset.maxed === 'true') {
+                el.style.width = el.dataset.pw;
+                el.style.height = el.dataset.ph;
+                el.style.left = el.dataset.pl;
+                el.style.top = el.dataset.pt;
+                el.dataset.maxed = 'false';
+            } else {
+                el.dataset.pw = el.style.width;
+                el.dataset.ph = el.style.height;
+                el.dataset.pl = el.style.left;
+                el.dataset.pt = el.style.top;
+                el.style.width = '100vw';
+                el.style.height = 'calc(100vh - 48px)';
+                el.style.left = '0';
+                el.style.top = '0';
+                el.dataset.maxed = 'true';
+            }
+        }
+
+        function resizeWindow(id, direction) {
+            const el = document.getElementById(id);
+            if (!el || el.dataset.maxed === 'true') return;
+            const minW = window.innerWidth <= 700 ? 280 : 320;
+            const minH = 220;
+            const maxW = Math.max(minW, window.innerWidth - 12);
+            const maxH = Math.max(minH, window.innerHeight - 60);
+            const stepW = window.innerWidth <= 700 ? 45 : 80;
+            const stepH = window.innerWidth <= 700 ? 35 : 60;
+
+            let w = parseInt(el.style.width) || el.offsetWidth;
+            let h = parseInt(el.style.height) || el.offsetHeight;
+            w = Math.max(minW, Math.min(maxW, w + direction * stepW));
+            h = Math.max(minH, Math.min(maxH, h + direction * stepH));
+
+            el.style.width = w + 'px';
+            el.style.height = h + 'px';
+            el.style.left = Math.max(4, Math.min(parseInt(el.style.left) || 4, window.innerWidth - w - 4)) + 'px';
+            el.style.top = Math.max(4, Math.min(parseInt(el.style.top) || 4, window.innerHeight - h - 52)) + 'px';
+            focusWindow(id);
+        }
+
+        function focusWindow(id) {
+            windows.forEach(wId => {
+                const el = document.getElementById(wId);
+                if (el) el.classList.remove('active');
+            });
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.zIndex = ++winZ;
+                el.classList.add('active');
+                el.style.display = 'flex';
+            }
+        }
+
+        function makeDraggable(el) {
+            const header = el.querySelector('.window-header');
+            let ox = 0, oy = 0, isDragging = false;
+
+            const startDrag = (clientX, clientY) => {
+                focusWindow(el.id);
+                if (el.dataset.maxed === 'true') return;
+                isDragging = true;
+                ox = clientX - el.offsetLeft;
+                oy = clientY - el.offsetTop;
+            };
+
+            const moveDrag = (clientX, clientY) => {
+                if (!isDragging) return;
+                el.style.left = (clientX - ox) + 'px';
+                el.style.top = (clientY - oy) + 'px';
+            };
+
+            const stopDrag = () => { isDragging = false; };
+
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.window-controls')) return;
+                startDrag(e.clientX, e.clientY);
+                const onMouseMove = (ev) => moveDrag(ev.clientX, ev.clientY);
+                const onMouseUp = () => {
+                    stopDrag();
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            header.addEventListener('touchstart', (e) => {
+                if (e.target.closest('.window-controls')) return;
+                const touch = e.touches[0];
+                startDrag(touch.clientX, touch.clientY);
+                const onTouchMove = (ev) => {
+                    const t = ev.touches[0];
+                    moveDrag(t.clientX, t.clientY);
+                };
+                const onTouchEnd = () => {
+                    stopDrag();
+                    document.removeEventListener('touchmove', onTouchMove);
+                    document.removeEventListener('touchend', onTouchEnd);
+                };
+                document.addEventListener('touchmove', onTouchMove);
+                document.addEventListener('touchend', onTouchEnd);
+            });
+        }
+
+        // ==========================================
+        // TASKBAR & START MENU
+        // ==========================================
+        function addTaskbarItem(id, title, icon) {
+            const tb = document.getElementById('taskbarItems');
+            const item = document.createElement('div');
+            item.className = 'taskbar-item active';
+            item.id = 'tb_' + id;
+            item.innerHTML = `${icon} ${title}`;
+            item.onclick = () => {
+                const el = document.getElementById(id);
+                if (el.style.display === 'none') focusWindow(id);
+                else minimizeWindow(id);
+            };
+            tb.appendChild(item);
+        }
+
+        function removeTaskbarItem(id) {
+            const item = document.getElementById('tb_' + id);
+            if (item) item.remove();
+        }
+
+        document.getElementById('startBtn').onclick = (e) => {
+            e.stopPropagation();
+            document.getElementById('startMenu').classList.toggle('show');
+        };
+        document.addEventListener('click', () => {
+            document.getElementById('startMenu').classList.remove('show');
+        });
+
+        function updateClock() {
+            const clock = document.getElementById('clock');
+            const d = new Date();
+            clock.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function showDialog(title, bodyHtml, buttons = ['OK'], cb = null) {
+            const overlay = document.createElement('div');
+            overlay.className = 'xp-dialog-overlay';
+            let bhtml = buttons.map((b, i) => `<button class="${i===0?'primary':''}" data-idx="${i}">${b}</button>`).join('');
+            overlay.innerHTML = `
+                <div class="xp-dialog">
+                    <div class="xp-dialog-title">${title}</div>
+                    <div class="xp-dialog-body">${bodyHtml}</div>
+                    <div class="xp-dialog-actions">${bhtml}</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.querySelectorAll('button').forEach(btn => {
+                btn.onclick = () => {
+                    const idx = parseInt(btn.dataset.idx);
+                    overlay.remove();
+                    if (cb) cb(idx);
+                };
+            });
+        }
+
+        function showPrompt(title, bodyText, defaultVal = '', cb) {
+            showDialog(title, `${bodyText}<br><input type="text" id="promptInp" value="${defaultVal}">`, ['OK', 'Cancel'], (idx) => {
+                if (idx === 0) {
+                    const val = document.getElementById('promptInp').value;
+                    cb(val);
+                } else cb(null);
+            });
+        }
+
+        // ==========================================
+        // TOUCH / RIGHT-CLICK CONTEXT MENU
+        // ==========================================
+        let xpLongPressTimer = null;
+        function hideContextMenu() {
+            const m = document.getElementById('xpContextMenu');
+            if (m) m.remove();
+        }
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.xp-context-menu')) hideContextMenu();
+        });
+        document.addEventListener('contextmenu', (e) => {
+            const target = e.target.closest('.desktop-icon, .file-item');
+            if (!target) return;
+            e.preventDefault();
+        });
+        function showContextMenu(x, y, items) {
+            hideContextMenu();
+            const menu = document.createElement('div');
+            menu.id = 'xpContextMenu';
+            menu.className = 'xp-context-menu';
+            items.forEach(item => {
+                const b = document.createElement('button');
+                b.textContent = item.label;
+                if (item.danger) b.className = 'danger';
+                b.onclick = async (e) => { e.stopPropagation(); hideContextMenu(); await item.action(); };
+                menu.appendChild(b);
+            });
+            document.body.appendChild(menu);
+            const mw = menu.offsetWidth, mh = menu.offsetHeight;
+            menu.style.left = Math.max(4, Math.min(x, window.innerWidth - mw - 4)) + 'px';
+            menu.style.top = Math.max(4, Math.min(y, window.innerHeight - mh - 52)) + 'px';
+        }
+        function attachLongPress(el, callback) {
+            let timer = null;
+            el.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                timer = setTimeout(() => {
+                    callback(t.clientX, t.clientY);
+                    timer = null;
+                    el.dataset.longPressed = '1';
+                }, 550);
+            }, {passive:true});
+            el.addEventListener('touchend', () => {
+                if (timer) clearTimeout(timer);
+                timer = null;
+                setTimeout(() => { delete el.dataset.longPressed; }, 50);
+            });
+            el.addEventListener('touchmove', () => { if (timer) clearTimeout(timer); timer = null; }, {passive:true});
+        }
+        function showDesktopMenu(x, y, item) {
+            showContextMenu(x, y, [
+                {label:'Open', action: async () => item.path ? openExplorer(item.path) : openApp(item.app)},
+                {label:'Refresh', action: async () => location.reload()},
+                {label:'Properties', action: async () => showDialog(item.name, 'Windows XP Web OS desktop shortcut.')}
+            ]);
+        }
+        async function deleteVirtualFile(parentPath, name, itemEl) {
+            const fs = await getFS();
+            const parent = getNode(fs, parentPath);
+            if (!parent || !parent.children || !parent.children[name]) return;
+            showDialog('Confirm Delete', `Are you sure you want to delete <b>${escapeHTML(name)}</b>?`, ['Delete','Cancel'], async (idx) => {
+                if (idx !== 0) return;
+                delete parent.children[name];
+                await saveFS(fs);
+                const win = itemEl?.closest('.window');
+                if (win) { closeWindow(win.id); openExplorer(parentPath); }
+            });
+        }
+        function showFileMenu(x, y, parentPath, name, itemEl) {
+            showContextMenu(x, y, [
+                {label:'Open', action: async () => handleFileClick(parentPath, name, itemEl)},
+                {label:'Delete', danger:true, action: async () => deleteVirtualFile(parentPath, name, itemEl)},
+                {label:'Rename', action: async () => renameVirtualFile(parentPath, name, itemEl)},
+                {label:'Properties', action: async () => { const fs=await getFS(); const p=getNode(fs,parentPath); const it=p?.children?.[name]; showDialog('Properties', `<b>${escapeHTML(name)}</b><br>Type: ${it?.type || 'file'}<br>Size: ${it?.content ? Math.round(String(it.content).length/1024) : 0} KB`); }}
+            ]);
+        }
+        async function renameVirtualFile(parentPath, oldName, itemEl) {
+            showPrompt('Rename', 'Enter new name:', oldName, async (newName) => {
+                newName = String(newName || '').trim(); if (!newName || newName === oldName) return;
+                const fs=await getFS(), p=getNode(fs,parentPath);
+                if (!p?.children?.[oldName]) return;
+                if (p.children[newName]) { showDialog('Error','A file or folder with that name already exists.'); return; }
+                p.children[newName]=p.children[oldName]; delete p.children[oldName]; await saveFS(fs);
+                const win=itemEl?.closest('.window'); if(win){closeWindow(win.id); openExplorer(parentPath);}
+            });
+        }
+
+        // ==========================================
+        // FILE EXPLORER + FOLDER UPLOAD + THUMBNAILS
+        // ==========================================
+        async function openExplorer(path = 'C:') {
+            try {
+                // Normalize common Windows-style paths.
+                path = String(path || 'C:').replace(/\\/g, '/').replace(/\/+/g, '/');
+                if (path.toLowerCase() === 'c') path = 'C:';
+                if (!/^C:/i.test(path)) path = 'C:' + (path.startsWith('/') ? path : '/' + path);
+
+                const fs = await getFS();
+                let node = getNode(fs, path);
+
+                // If the root is missing because of old/corrupt saved data,
+                // recreate the minimum valid C: root and retry.
+                if (!node && path === 'C:') {
+                    fs['C:'] = {
+                        type: 'folder',
+                        children: {
+                            'Documents': { type: 'folder', children: {} },
+                            'Pictures': { type: 'folder', children: {} },
+                            'Music': { type: 'folder', children: {} },
+                            'Videos': { type: 'folder', children: {} }
+                        }
+                    };
+                    await saveFS(fs);
+                    node = fs['C:'];
+                }
+
+                if (!node) {
+                    showDialog('Error', 'Directory not found: ' + escapeHTML(path));
+                    return;
+                }
+
+                // Build lightweight Play All counts only.
+                // IMPORTANT: never put base64 audio/video data into the DOM or
+                // an onclick attribute. Large data URLs can duplicate the media
+                // many times and crash mobile Chrome ("Aw, Snap!").
+                const children = node.children || {};
+                let allAudioCount = 0;
+                let allVideoCount = 0;
+                for (const name in children) {
+                    const item = children[name];
+                    if (!item || item.type === 'folder') continue;
+                    const contentSrc = String(item.content || item.src || '');
+                    if (/\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name) || contentSrc.startsWith('data:audio')) allAudioCount++;
+                    if (/\.(mp4|webm|ogg|mov|m4v)$/i.test(name) || contentSrc.startsWith('data:video')) allVideoCount++;
+                }
+
+            let content = `
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;background:#ece9d8;padding:6px;border-bottom:1px solid #ccc;flex-wrap:wrap;">
+                    <button class="btn" onclick="openExplorer('C:')">🏠 Home (C:)</button>
+                    <span style="font-weight:bold;font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:180px;">Path: ${path}</span>
+                    <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap;">
+                        <button class="btn" onclick='createFolder(${JSON.stringify(path)}, this)' >📁 New Folder</button>
+                        <label class="btn btn-primary" style="cursor:pointer;">
+                            📄 Upload Files <input type="file" multiple style="display:none;" onchange='uploadRealFiles(event, ${JSON.stringify(path)}, this)' >
+                        </label>
+                        <label class="btn btn-primary" style="cursor:pointer;">
+                            📁 Upload Folder <input type="file" webkitdirectory directory multiple style="display:none;" onchange='uploadRealFolder(event, ${JSON.stringify(path)}, this)' >
+                        </label>
+                    </div>
+                </div>
+                ${allAudioCount || allVideoCount ? `
+                <div class="media-playall-bar">
+                    ${allAudioCount ? `<button class="btn btn-primary" onclick='playAllFromFolder("audio", ${JSON.stringify(path)})'>🎵 ▶ All Music (${allAudioCount})</button>` : ''}
+                    ${allVideoCount ? `<button class="btn btn-primary" onclick='playAllFromFolder("video", ${JSON.stringify(path)})'>🎬 ▶ All Videos (${allVideoCount})</button>` : ''}
+                    <span class="media-count">Auto Next: ON</span>
+                </div>` : ''}
+                <div class="file-grid">
+            `;
+
+            for (let name in children) {
+                const item = children[name];
+                let iconHtml = '<div class="icon">📄</div>';
+
+                if (item.type === 'folder') {
+                    iconHtml = '<div class="icon">📁</div>';
+                } else if (name.match(/\.(png|jpg|jpeg|gif)$/i) || item.content?.startsWith('data:image')) {
+                    iconHtml = `<img class="thumb" src="${item.content}">`;
+                } else if (name.match(/\.(mp4|webm|ogg|mov|m4v)$/i) || item.content?.startsWith('data:video')) {
+                    // Do NOT put the large video data URL into the DOM. A real
+                    // thumbnail is generated lazily after the window is shown.
+                    iconHtml = `<div class="video-thumb-box" data-video-thumb="1" data-file-name="${escapeHTML(name)}">
+                        <div class="video-thumb-loading">🎬<br>Loading…</div>
+                        <div class="video-play-badge">▶</div>
+                    </div>`;
+                } else if (name.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/i)) {
+                    iconHtml = '<div class="icon">🎵</div>';
+                }
+
+                content += `
+                    <div class="file-item" onclick='handleFileClick(${JSON.stringify(path)}, ${JSON.stringify(name)}, this)'>
+                        ${iconHtml}
+                        <div class="name">${name}</div>
+                    </div>
+                `;
+            }
+
+            content += `</div>`;
+            const explorerId = createWindow('Explorer - ' + path, '📁', content, { width: 640, height: 420 });
+            const explorerWin = document.getElementById(explorerId);
+            if (explorerWin) explorerWin.dataset.explorerPath = path;
+            explorerWin?.querySelectorAll('.file-item').forEach((el) => {
+                const fileName = el.querySelector('.name')?.textContent || '';
+                el.addEventListener('contextmenu', (e) => { e.preventDefault(); showFileMenu(e.clientX, e.clientY, path, fileName, el); });
+                attachLongPress(el, (x,y) => showFileMenu(x,y,path,fileName,el));
+            });
+
+            // Generate thumbnails one-by-one after Explorer is visible. This is
+            // much faster and safer on phones than putting every MP4 into <video>
+            // elements at once. Only a tiny JPEG/PNG preview remains in the DOM.
+            if (explorerWin) {
+                lazyLoadVideoThumbnails(explorerWin, children);
+            }
+            } catch (err) {
+                console.error('openExplorer error:', err);
+                showDialog('Windows XP Web OS', 'Explorer could not open this folder. Please try again.');
+            }
+        }
+
+        function refreshWindow(btnEl, targetPath) {
+            const win = btnEl.closest('.window');
+            if (win) {
+                closeWindow(win.id);
+                openExplorer(targetPath);
+            }
+        }
+
+        async function createFolder(path, btnEl) {
+            showPrompt('Create Folder', 'Enter Folder Name:', 'New Folder', async (name) => {
+                if (!name) return;
+                const fs = await getFS();
+                const node = getNode(fs, path);
+                if (node && node.children) {
+                    node.children[name] = { type: 'folder', children: {} };
+                    await saveFS(fs);
+                    refreshWindow(btnEl, path);
+                }
+            });
+        }
+
+        async function uploadRealFiles(e, targetPath, btnEl) {
+            const files = e.target.files;
+            if (!files.length) return;
+            const fs = await getFS();
+            const node = getNode(fs, targetPath);
+            let loadedCount = 0;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = async (evt) => {
+                    if (node && node.children) {
+                        node.children[file.name] = { type: 'file', content: evt.target.result };
+                    }
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        await saveFS(fs);
+                        refreshWindow(btnEl, targetPath);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadRealFolder(e, targetPath, btnEl) {
+            const files = e.target.files;
+            if (!files.length) return;
+            const fs = await getFS();
+            let loadedCount = 0;
+
+            Array.from(files).forEach(file => {
+                const relPath = file.webkitRelativePath;
+                const parts = relPath.split('/');
+                const fileName = parts.pop();
+                
+                let cur = getNode(fs, targetPath);
+                parts.forEach(folderName => {
+                    if (!cur.children[folderName]) {
+                        cur.children[folderName] = { type: 'folder', children: {} };
+                    }
+                    cur = cur.children[folderName];
+                });
+
+                const reader = new FileReader();
+                reader.onload = async (evt) => {
+                    cur.children[fileName] = { type: 'file', content: evt.target.result };
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        await saveFS(fs);
+                        refreshWindow(btnEl, targetPath);
+                        showDialog('Success', 'Folder Uploaded Successfully!');
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleFileClick(parentPath, name, itemEl) {
+            const fs = await getFS();
+            const parent = getNode(fs, parentPath);
+            const item = parent.children[name];
+            
+            if (item.type === 'folder') {
+                openExplorer(parentPath + '/' + name);
+            } else {
+                if (name.match(/\.(mp3|wav|ogg)$/i)) {
+                    openAudioPlayer(name, item.content);
+                } else if (name.match(/\.(mp4|webm|ogg|mov|m4v)$/i) || item.content?.startsWith('data:video')) {
+                    openVideoPlayer(name, item.content);
+                } else if (name.match(/\.(png|jpg|jpeg|gif|webp)$/i) || item.content?.startsWith('data:image')) {
+                    const imageQueue = Object.keys(parent.children || {}).filter(n => {
+                        const it = parent.children[n]; return it?.type === 'file' && (/\.(png|jpg|jpeg|gif|webp)$/i.test(n) || String(it.content||'').startsWith('data:image'));
+                    }).map(n => ({name:n, src:parent.children[n].content}));
+                    const idx = imageQueue.findIndex(x => x.name === name);
+                    openImageViewer(name, item.content, imageQueue, idx < 0 ? 0 : idx);
+                } else {
+                    openNotepad(parentPath, name, item.content || '');
+                }
+            }
+        }
+
+        // ==========================================
+        // MEDIA PLAYERS & VIEWERS
+        // ==========================================
+        // ==========================================
+        // MUSIC PLAYER + REAL-TIME EQUALIZER
+        // ==========================================
+        let xpAudioContext = null;
+        let xpAudioAnalyser = null;
+        let xpAudioSource = null;
+        let xpEqAnimation = null;
+        let xpCurrentAudio = null;
+
+        function escapeHTML(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // ============================================================
+        // FAST VIDEO THUMBNAILS
+        // Creates only one hidden video element at a time, seeks to a
+        // representative frame, captures a small preview, then releases
+        // the video element. This avoids mobile Chrome memory spikes.
+        // ============================================================
+        async function makeVideoThumbnail(src, width = 160, height = 90) {
+            return new Promise((resolve) => {
+                if (!src) return resolve(null);
+                const video = document.createElement('video');
+                const canvas = document.createElement('canvas');
+                let finished = false;
+                let timer = null;
+
+                const cleanup = (result) => {
+                    if (finished) return;
+                    finished = true;
+                    if (timer) clearTimeout(timer);
+                    video.removeAttribute('src');
+                    try { video.load(); } catch (_) {}
+                    canvas.width = canvas.height = 1;
+                    resolve(result || null);
+                };
+
+                video.muted = true;
+                video.playsInline = true;
+                video.preload = 'metadata';
+                video.setAttribute('muted', '');
+                video.setAttribute('playsinline', '');
+
+                video.onloadedmetadata = () => {
+                    try {
+                        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+                        // A tiny seek gives a better thumbnail than the first
+                        // black frame, while keeping processing fast.
+                        video.currentTime = duration > 0.8 ? Math.min(0.8, duration * 0.15) : 0;
+                    } catch (_) {
+                        video.onloadeddata?.();
+                    }
+                };
+
+                video.onloadeddata = () => {
+                    try {
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d', { alpha: false });
+                        ctx.fillStyle = '#101820';
+                        ctx.fillRect(0, 0, width, height);
+                        const vw = video.videoWidth || width;
+                        const vh = video.videoHeight || height;
+                        const scale = Math.min(width / vw, height / vh);
+                        const dw = vw * scale;
+                        const dh = vh * scale;
+                        ctx.drawImage(video, (width-dw)/2, (height-dh)/2, dw, dh);
+                        cleanup(canvas.toDataURL('image/jpeg', 0.58));
+                    } catch (_) {
+                        cleanup(null);
+                    }
+                };
+
+                video.onerror = () => cleanup(null);
+                timer = setTimeout(() => cleanup(null), 7000);
+                video.src = src;
+                video.load();
+            });
+        }
+
+        async function lazyLoadVideoThumbnails(explorerWin, children) {
+            if (!explorerWin || !children) return;
+            const boxes = Array.from(explorerWin.querySelectorAll('[data-video-thumb="1"]'));
+            if (!boxes.length) return;
+
+            // Process sequentially. On a phone this is noticeably faster overall
+            // than decoding several HD videos simultaneously.
+            for (const box of boxes) {
+                if (!box.isConnected) continue;
+                const name = box.getAttribute('data-file-name') || '';
+                const item = children[name];
+                const src = item?.content || item?.src || '';
+                if (!src) continue;
+
+                const cached = window.__xpVideoThumbCache?.get(src);
+                const thumb = cached || await makeVideoThumbnail(src);
+                if (thumb) {
+                    window.__xpVideoThumbCache = window.__xpVideoThumbCache || new Map();
+                    window.__xpVideoThumbCache.set(src, thumb);
+                    box.innerHTML = `<img src="${thumb}" alt="Video thumbnail"><div class="video-play-badge">▶</div>`;
+                } else {
+                    box.innerHTML = `<div class="icon" style="font-size:30px;">🎬</div><div class="video-play-badge">▶</div>`;
+                }
+
+                // Yield to the browser between videos so scrolling/touch remains responsive.
+                await new Promise(r => setTimeout(r, 20));
+            }
+        }
+
+        function startMusicEqualizer(audio, canvas) {
+            if (!audio || !canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            try {
+                if (!xpAudioContext) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) throw new Error('Web Audio API is not supported');
+                    xpAudioContext = new AudioCtx();
+                }
+
+                if (xpCurrentAudio !== audio) {
+                    if (xpAudioSource) {
+                        try { xpAudioSource.disconnect(); } catch (_) {}
+                    }
+                    xpAudioSource = xpAudioContext.createMediaElementSource(audio);
+                    xpAudioAnalyser = xpAudioContext.createAnalyser();
+                    xpAudioAnalyser.fftSize = 256;
+                    xpAudioAnalyser.smoothingTimeConstant = 0.78;
+                    xpAudioSource.connect(xpAudioAnalyser);
+                    xpAudioAnalyser.connect(xpAudioContext.destination);
+                    xpCurrentAudio = audio;
+                }
+
+                if (xpAudioContext.state === 'suspended') {
+                    xpAudioContext.resume().catch(() => {});
+                }
+            } catch (err) {
+                console.warn('Equalizer initialization failed:', err);
+                drawFallbackEqualizer(canvas);
+                return;
+            }
+
+            cancelAnimationFrame(xpEqAnimation);
+
+            const data = new Uint8Array(xpAudioAnalyser.frequencyBinCount);
+
+            function resizeCanvas() {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const rect = canvas.getBoundingClientRect();
+                const width = Math.max(1, Math.floor(rect.width * dpr));
+                const height = Math.max(1, Math.floor(rect.height * dpr));
+                if (canvas.width !== width || canvas.height !== height) {
+                    canvas.width = width;
+                    canvas.height = height;
+                }
+                return { width, height, dpr };
+            }
+
+            function draw() {
+                const { width, height } = resizeCanvas();
+                xpAudioAnalyser.getByteFrequencyData(data);
+
+                ctx.clearRect(0, 0, width, height);
+
+                const bars = Math.min(48, data.length);
+                const gap = Math.max(2, width / 500);
+                const barWidth = Math.max(3, (width - gap * (bars - 1)) / bars);
+
+                for (let i = 0; i < bars; i++) {
+                    const sampleIndex = Math.floor(i * data.length / bars);
+                    const value = data[sampleIndex] / 255;
+                    const boosted = Math.min(1, Math.pow(value, 0.78) * 1.12);
+                    const barHeight = Math.max(2, boosted * height * 0.86);
+                    const x = i * (barWidth + gap);
+                    const y = height - barHeight;
+
+                    const gradient = ctx.createLinearGradient(0, y, 0, height);
+                    gradient.addColorStop(0, '#7cff00');
+                    gradient.addColorStop(0.45, '#ffe600');
+                    gradient.addColorStop(1, '#ff3b30');
+
+                    ctx.fillStyle = gradient;
+                    ctx.shadowColor = '#39ff14';
+                    ctx.shadowBlur = 8;
+                    ctx.fillRect(x, y, barWidth, barHeight);
+                }
+
+                ctx.shadowBlur = 0;
+
+                if (!audio.paused && !audio.ended) {
+                    xpEqAnimation = requestAnimationFrame(draw);
+                } else {
+                    drawIdleEqualizer(canvas);
+                }
+            }
+
+            draw();
+        }
+
+        function drawIdleEqualizer(canvas) {
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+            canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const bars = 32;
+            const gap = Math.max(2, w / 500);
+            const bw = Math.max(3, (w - gap * (bars - 1)) / bars);
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.shadowColor = '#00e5ff';
+            ctx.shadowBlur = 6;
+
+            for (let i = 0; i < bars; i++) {
+                const wave = 0.08 + Math.abs(Math.sin(i * 0.65)) * 0.12;
+                const bh = Math.max(2, wave * h);
+                ctx.fillStyle = '#00a8c6';
+                ctx.fillRect(i * (bw + gap), h - bh, bw, bh);
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawFallbackEqualizer(canvas) {
+            drawIdleEqualizer(canvas);
+        }
+
+        let xpMediaQueue = [];
+        let xpMediaIndex = 0;
+        let xpMediaType = null;
+        let xpMediaWindowId = null;
+
+        // Load only the selected folder's media into the queue. This keeps
+        // large base64 files out of Explorer HTML and prevents mobile crashes.
+        async function playAllFromFolder(type, folderPath) {
+            try {
+                const fs = await getFS();
+                const node = getNode(fs, folderPath);
+                if (!node || !node.children) {
+                    showDialog('Media Player', 'Folder not found.');
+                    return;
+                }
+
+                const queue = [];
+                for (const name in node.children) {
+                    const item = node.children[name];
+                    if (!item || item.type === 'folder') continue;
+                    const src = item.content || item.src || '';
+                    const isAudio = /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name) || String(src).startsWith('data:audio');
+                    const isVideo = /\.(mp4|webm|ogg|mov|m4v)$/i.test(name) || String(src).startsWith('data:video');
+                    if ((type === 'audio' && isAudio) || (type === 'video' && isVideo)) {
+                        queue.push({ name: name, src: src });
+                    }
+                }
+
+                queue.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                if (!queue.length) {
+                    showDialog('Media Player', type === 'audio' ? 'No music found in this folder.' : 'No videos found in this folder.');
+                    return;
+                }
+                playAllMedia(type, queue, 0);
+            } catch (err) {
+                console.error('Play All error:', err);
+                showDialog('Media Player', 'Unable to load the playlist.');
+            }
+        }
+
+        function playAllMedia(type, list, startIndex = 0) {
+            if (!Array.isArray(list) || !list.length) return;
+            xpMediaType = type;
+            xpMediaQueue = list;
+            xpMediaIndex = Math.max(0, Math.min(startIndex, list.length - 1));
+            if (type === 'audio') {
+                openPlaylistAudio();
+            } else {
+                openPlaylistVideo();
+            }
+        }
+
+        function openPlaylistAudio() {
+            const item = xpMediaQueue[xpMediaIndex];
+            if (!item) return;
+
+            const rows = xpMediaQueue.map((x, i) =>
+                `<div class="playlist-row ${i === xpMediaIndex ? 'current' : ''}" onclick="playAllMedia('audio', xpMediaQueue, ${i})">${i+1}. ${escapeHTML(x.name)}</div>`
+            ).join('');
+
+            const html = `
+                <div class="music-player">
+                    <div style="font-size:42px;text-align:center;">🎵</div>
+                    <div class="music-now-playing">${escapeHTML(item.name)}</div>
+                    <div class="music-eq-wrap"><canvas class="music-eq-canvas" id="musicEqCanvas"></canvas></div>
+                    <div class="music-visualizer-status">REAL-TIME SPECTRUM ANALYZER • TRACK ${xpMediaIndex+1} / ${xpMediaQueue.length}</div>
+                    <audio id="musicAudio" class="music-audio" controls autoplay crossorigin="anonymous">
+                        <source src="${item.src}">
+                    </audio>
+                    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                        <button class="btn" onclick="previousMedia()">⏮ Previous</button>
+                        <button class="btn btn-primary" onclick="toggleMediaPlay()">▶/⏸ Play</button>
+                        <button class="btn" onclick="nextMedia()">Next ⏭</button>
+                    </div>
+                    <div class="playlist-box">${rows}</div>
+                </div>`;
+
+            if (xpMediaWindowId) {
+                const old = document.getElementById(xpMediaWindowId);
+                if (old) closeWindow(xpMediaWindowId);
+            }
+
+            xpMediaWindowId = createWindow('Windows Media Player - All Music', '🎵', html, {width: 440, height: 430});
+            setupMediaAudio(xpMediaWindowId);
+        }
+
+        function setupMediaAudio(winId) {
+            const win = document.getElementById(winId);
+            if (!win) return;
+            const audio = win.querySelector('#musicAudio');
+            const canvas = win.querySelector('#musicEqCanvas');
+            if (!audio) return;
+
+            const activate = () => {
+                if (canvas) startMusicEqualizer(audio, canvas);
+            };
+            audio.addEventListener('play', activate);
+            audio.addEventListener('playing', activate);
+            audio.addEventListener('pause', () => {
+                cancelAnimationFrame(xpEqAnimation);
+                if (canvas) drawIdleEqualizer(canvas);
+            });
+            audio.addEventListener('ended', () => {
+                cancelAnimationFrame(xpEqAnimation);
+                if (xpMediaIndex < xpMediaQueue.length - 1) {
+                    xpMediaIndex++;
+                    if (xpMediaType === 'audio') openPlaylistAudio();
+                    else openPlaylistVideo();
+                } else if (canvas) {
+                    drawIdleEqualizer(canvas);
+                }
+            });
+            audio.addEventListener('click', activate);
+            setTimeout(() => {
+                if (canvas) drawIdleEqualizer(canvas);
+                if (!audio.paused) activate();
+            }, 80);
+        }
+
+        function openPlaylistVideo() {
+            const item = xpMediaQueue[xpMediaIndex];
+            if (!item) return;
+
+            const rows = xpMediaQueue.map((x, i) =>
+                `<div class="playlist-row ${i === xpMediaIndex ? 'current' : ''}" onclick="playAllMedia('video', xpMediaQueue, ${i})">${i+1}. ${escapeHTML(x.name)}</div>`
+            ).join('');
+
+            const html = `
+                <div style="height:100%;background:#050505;color:white;display:flex;flex-direction:column;gap:7px;padding:8px;">
+                    <div style="font-weight:bold;text-align:center;font-size:12px;">🎬 ${escapeHTML(item.name)}</div>
+                    <div style="flex:1;min-height:150px;display:flex;align-items:center;justify-content:center;background:#000;">
+                        <video id="playlistVideo" controls autoplay playsinline style="max-width:100%;max-height:100%;">
+                            <source src="${item.src}">
+                        </video>
+                    </div>
+                    <div style="text-align:center;font-size:10px;color:#bbb;">VIDEO ${xpMediaIndex+1} / ${xpMediaQueue.length} • AUTO NEXT: ON</div>
+                    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                        <button class="btn" onclick="previousMedia()">⏮ Previous</button>
+                        <button class="btn" onclick="toggleVideoPlay()">▶/⏸ Play</button>
+                        <button class="btn" onclick="nextMedia()">Next ⏭</button>
+                    </div>
+                    <div class="playlist-box">${rows}</div>
+                </div>`;
+
+            if (xpMediaWindowId) {
+                const old = document.getElementById(xpMediaWindowId);
+                if (old) closeWindow(xpMediaWindowId);
+            }
+            xpMediaWindowId = createWindow('Windows Media Player - All Videos', '🎬', html, {width: 540, height: 440});
+
+            const win = document.getElementById(xpMediaWindowId);
+            const video = win?.querySelector('#playlistVideo');
+            if (video) {
+                video.addEventListener('ended', () => {
+                    if (xpMediaIndex < xpMediaQueue.length - 1) {
+                        xpMediaIndex++;
+                        openPlaylistVideo();
+                    }
+                });
+            }
+        }
+
+        function nextMedia() {
+            if (xpMediaIndex >= xpMediaQueue.length - 1) return;
+            xpMediaIndex++;
+            if (xpMediaType === 'audio') openPlaylistAudio();
+            else openPlaylistVideo();
+        }
+
+        function previousMedia() {
+            if (xpMediaIndex <= 0) return;
+            xpMediaIndex--;
+            if (xpMediaType === 'audio') openPlaylistAudio();
+            else openPlaylistVideo();
+        }
+
+        function toggleMediaPlay() {
+            const audio = document.querySelector('#musicAudio');
+            if (!audio) return;
+            audio.paused ? audio.play().catch(() => {}) : audio.pause();
+        }
+
+        function toggleVideoPlay() {
+            const video = document.querySelector('#playlistVideo');
+            if (!video) return;
+            video.paused ? video.play().catch(() => {}) : video.pause();
+        }
+
+        function openAudioPlayer(title, src) {
+            xpMediaType = 'audio';
+            xpMediaQueue = [{name: title, src: src}];
+            xpMediaIndex = 0;
+            openPlaylistAudio();
+        }
+
+        function openVideoPlayer(title, src) {
+            xpMediaType = 'video';
+            xpMediaQueue = [{name: title, src: src}];
+            xpMediaIndex = 0;
+            openPlaylistVideo();
+        }
+
+        let xpImageQueue = [];
+        let xpImageIndex = 0;
+        let xpImageWindowId = null;
+        function openImageViewer(title, src, queue = null, index = 0) {
+            xpImageQueue = Array.isArray(queue) && queue.length ? queue : [{name:title,src:src}];
+            xpImageIndex = Math.max(0, Math.min(index, xpImageQueue.length - 1));
+            const item = xpImageQueue[xpImageIndex];
+            const html = `
+                <div class="image-viewer">
+                    <div style="text-align:center;padding:6px;font-weight:bold;font-size:12px;">🖼️ <span id="imageViewerTitle">${escapeHTML(item.name)}</span></div>
+                    <div class="image-viewer-stage"><img id="imageViewerImg" src="${item.src}" alt="${escapeHTML(item.name)}"></div>
+                    <div class="image-viewer-controls">
+                        <button class="btn" onclick="previousImage()">⏮ Previous</button>
+                        <span id="imageViewerCount" style="padding:5px;font-size:11px;">${xpImageIndex+1} / ${xpImageQueue.length}</span>
+                        <button class="btn" onclick="nextImage()">Next ⏭</button>
+                    </div>
+                </div>`;
+            if (xpImageWindowId) { const old=document.getElementById(xpImageWindowId); if(old) closeWindow(xpImageWindowId); }
+            xpImageWindowId=createWindow('Picture Viewer - ' + item.name, '🖼️', html, {width:500,height:380});
+        }
+        function nextImage(){ if(xpImageIndex >= xpImageQueue.length-1) return; xpImageIndex++; openImageViewer(xpImageQueue[xpImageIndex].name, xpImageQueue[xpImageIndex].src, xpImageQueue, xpImageIndex); }
+        function previousImage(){ if(xpImageIndex <= 0) return; xpImageIndex--; openImageViewer(xpImageQueue[xpImageIndex].name, xpImageQueue[xpImageIndex].src, xpImageQueue, xpImageIndex); }
+
+        async function openStorageManager() {
+            const db = await initDB();
+            const tx = db.transaction('sys', 'readonly');
+            const store = tx.objectStore('sys');
+            const req = store.get('filesystem');
+            req.onsuccess = () => {
+                const fsStr = JSON.stringify(req.result?.data || {});
+                const sizeKB = (fsStr.length / 1024).toFixed(2);
+                let html = `
+                    <div style="flex:1;overflow:auto;padding:10px;">
+                        <b>IndexedDB File System Status:</b><br><br>
+                        <p>Total Storage Used: <b>${sizeKB} KB</b></p>
+                        <p style="color:green;margin-top:6px;">✔ Unlimited High Capacity Mode Active</p>
+                        <br>
+                        <button class="btn btn-danger" onclick="clearStorageData()">Clear All XP Storage Data</button>
+                    </div>
+                `;
+                createWindow('Storage Access', '💾', html, { width: 450, height: 260 });
+            };
+        }
+
+        async function clearStorageData() {
+            const db = await initDB();
+            const tx = db.transaction('sys', 'readwrite');
+            tx.objectStore('sys').clear();
+            location.reload();
+        }
+
+        function openNotepad(filePath = null, fileName = null, initialText = '') {
+            const html = `
+                <div style="height:100%;display:flex;flex-direction:column;">
+                    <div class="notepad-toolbar">
+                        <button class="btn" onclick="notepadNew(this)">📄 New</button>
+                        <button class="btn btn-primary" onclick="notepadSave(this)">💾 Save</button>
+                        <button class="btn" onclick="notepadSaveAs(this)">💾 Save As</button>
+                        <button class="btn btn-danger" onclick="notepadDelete(this)">🗑️ Delete</button>
+                        <span class="notepad-status" style="font-size:11px;padding:6px;">${fileName ? 'Editing: '+escapeHTML(fileName) : 'New document'}</span>
+                    </div>
+                    <textarea class="notepad-area" spellcheck="false"></textarea>
+                </div>`;
+            const id=createWindow(fileName ? 'Notepad - '+fileName : 'Notepad', '📝', html, { width: 480, height: 320 });
+            const win=document.getElementById(id);
+            win.dataset.filePath=filePath || ''; win.dataset.fileName=fileName || '';
+            win.querySelector('.notepad-area').value=initialText || '';
+            return id;
+        }
+        function notepadNew(btn){ const win=btn.closest('.window'); if(!win)return; win.dataset.filePath=''; win.dataset.fileName=''; win.querySelector('.notepad-area').value=''; win.querySelector('.notepad-status').textContent='New document'; }
+        async function notepadSave(btn){
+            const win=btn.closest('.window'); if(!win)return;
+            let path=win.dataset.filePath, name=win.dataset.fileName;
+            const saveNow=async()=>{
+                const fs=await getFS(); const targetPath=path || 'C:/Documents'; const parent=getNode(fs,targetPath);
+                if(!parent?.children)return;
+                parent.children[name]={type:'file',content:win.querySelector('.notepad-area').value}; await saveFS(fs);
+                win.querySelector('.notepad-status').textContent='Saved: '+name;
+
+                // Immediately refresh any open My Documents window so the new
+                // note appears without the user having to close/reopen Explorer.
+                const explorerIds = windows.filter(wId => {
+                    const ew = document.getElementById(wId);
+                    return ew && ew.dataset.explorerPath === 'C:/Documents';
+                });
+                explorerIds.forEach(wId => closeWindow(wId));
+                if (explorerIds.length) await openExplorer('C:/Documents');
+            };
+            if(!name){ showPrompt('Save Notepad', 'File name:', 'NewNote.txt', async (n)=>{ n=String(n||'').trim(); if(!n)return; if(!/\.[a-z0-9]+$/i.test(n))n+='.txt'; name=n; path='C:/Documents'; win.dataset.filePath=path; win.dataset.fileName=name; win.querySelector('.window-title span:last-child').textContent='Notepad - '+name; await saveNow(); }); }
+            else await saveNow();
+        }
+        async function notepadSaveAs(btn){
+            const win=btn.closest('.window'); if(!win)return;
+            showPrompt('Save Notepad As', 'File name:', win.dataset.fileName || 'NewNote.txt', async (n)=>{
+                n=String(n||'').trim(); if(!n)return;
+                if(!/\.[a-z0-9]+$/i.test(n)) n+='.txt';
+                win.dataset.filePath='C:/Documents';
+                win.dataset.fileName=n;
+                const title=win.querySelector('.window-title span:last-child');
+                if(title) title.textContent='Notepad - '+n;
+                await notepadSave(btn);
+            });
+        }
+
+        async function notepadDelete(btn){
+            const win=btn.closest('.window'); if(!win)return; const path=win.dataset.filePath, name=win.dataset.fileName;
+            if(!name){ closeWindow(win.id); return; }
+            const fs=await getFS(), p=getNode(fs,path); if(!p?.children?.[name]){closeWindow(win.id);return;}
+            showDialog('Delete Note', `Delete <b>${escapeHTML(name)}</b>?`, ['Delete','Cancel'], async (idx)=>{
+                if(idx!==0) return;
+                delete p.children[name];
+                await saveFS(fs);
+                closeWindow(win.id);
+                const explorerIds = windows.filter(wId => {
+                    const ew=document.getElementById(wId);
+                    return ew && ew.dataset.explorerPath === path;
+                });
+                explorerIds.forEach(wId=>closeWindow(wId));
+                if(explorerIds.length) await openExplorer(path);
+            });
+        }
+
+        function openPaint() {
+            createWindow('Paint', '🎨', `<div style="display:flex;justify-content:center;align-items:center;height:100%;">Use Upload feature in Pictures folder to store images.</div>`, { width: 400, height: 250 });
+        }
+
+        function openTaskManager() {
+            let html = `<b>Running Windows:</b><br><br><ul>`;
+            windows.forEach(wId => {
+                const el = document.getElementById(wId);
+                const title = el ? el.querySelector('.window-title').textContent : 'Window';
+                html += `<li style="margin-bottom:6px;">${title} <button class="btn btn-danger" onclick="closeWindow('${wId}')">End Task</button></li>`;
+            });
+            html += `</ul>`;
+            createWindow('Task Manager', '📊', html, { width: 340, height: 240 });
+        }
+
+        function shutdown() {
+            document.body.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:black;color:white;font-size:22px;">Windows is shutting down...</div>`;
+            setTimeout(() => location.reload(), 1500);
+        }
+
+        function openApp(app) {
+            if (app === 'explorer') openExplorer('C:');
+            else if (app === 'documents') openExplorer('C:/Documents');
+            else if (app === 'notepad') openNotepad();
+            else if (app === 'paint') openPaint();
+            else if (app === 'storage') openStorageManager();
+            else if (app === 'taskmanager') openTaskManager();
+        }
+
+        async function initDesktop() {
+            const desktop = document.getElementById('desktop');
+            if (!desktop) return;
+
+            // Icons are rendered directly in HTML so the desktop remains visible
+            // even if IndexedDB is slow/unavailable on a mobile browser.
+            const items = [
+                { name:'My Computer', path:'C:' },
+                { name:'My Documents', path:'C:/Documents' },
+                { name:'My Music', path:'C:/Music' },
+                { name:'My Videos', path:'C:/Videos' },
+                { name:'My Pictures', path:'C:/Pictures' },
+                { name:'Storage Access', app:'storage' }
+            ];
+
+            desktop.querySelectorAll('.desktop-icon').forEach((el, index) => {
+                const item = items[index];
+                if (!item) return;
+
+                // Prevent duplicate listeners if initDesktop is called again.
+                if (el.dataset.xpBound === '1') return;
+                el.dataset.xpBound = '1';
+
+                let lastTap = 0;
+                el.addEventListener('click', async (event) => {
+                    desktop.querySelectorAll('.desktop-icon').forEach(x => x.style.background = '');
+                    el.style.background = 'rgba(255,255,255,0.25)';
+
+                    // On touch devices, a normal tap opens the item.
+                    // Desktop mouse users can still double-click.
+                    if (event.detail === 1 && 'ontouchstart' in window) {
+                        const now = Date.now();
+                        if (now - lastTap < 500) return;
+                        lastTap = now;
+                        try {
+                            if (item.path) await openExplorer(item.path);
+                            else if (item.app) openApp(item.app);
+                        } catch (err) {
+                            console.error('Desktop tap open error:', err);
+                        }
+                    }
+                });
+
+                el.addEventListener('dblclick', async (event) => {
+                    event.preventDefault();
+                    try {
+                        if (item.path) await openExplorer(item.path);
+                        else if (item.app) openApp(item.app);
+                    } catch (err) {
+                        console.error('Desktop open error:', err);
+                        showDialog('Windows XP Web OS', 'Unable to open this item.');
+                    }
+                });
+
+                el.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    showDesktopMenu(e.clientX, e.clientY, item);
+                });
+                attachLongPress(el, (x,y) => showDesktopMenu(x,y,item));
+            });
+
+            // Do not block desktop rendering on IndexedDB.
+            getFS().catch(err => console.warn('Filesystem initialization delayed:', err));
+        }
+        initDesktop().catch(err => console.error('Desktop initialization error:', err));
+    </script>
+</body>
+</html>
+</html>
