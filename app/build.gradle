@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'com.xp.webos'
-    compileSdk 35
+    compileSdk 34
 
     defaultConfig {
-        applicationId 'com.xp.webos'
+        applicationId "com.xp.webos"
         minSdk 23
-        targetSdk 35
+        targetSdk 34
         versionCode 1
-        versionName '1.0'
+        versionName "1.0"
     }
 
     buildTypes {
@@ -28,6 +28,6 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'androidx.activity:activity:1.10.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.activity:activity:1.8.2'
 }
